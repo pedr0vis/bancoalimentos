@@ -1,10 +1,11 @@
 package com.bancoalimentos.model;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
- * HERANÇA: Instituicao extends Usuario (Instituicao É-UM Usuario).
+ * HERANÇA: Instituicao extends Usuario (Instituicao é um Usuario).
  * ASSOCIAÇÃO: Instituicao (1..1) -- PedidoRetirada (0..*), rotulada "Emitir".
  * Uma instituição pode emitir vários pedidos de retirada; cada pedido pertence a exatamente uma instituição.
  */
@@ -14,41 +15,40 @@ public class Instituicao extends Usuario {
     private String nomeFantasia;
     private String endereco;
     private String email;
+    
+    private final List<PedidoRetirada> pedidos = new ArrayList<>();
 
-    // Lado "muitos" da associação com PedidoRetirada
-    private List<PedidoRetirada> pedidos = new ArrayList<>();
-
-    public Instituicao(int idUsuario, String login, String senha, String documento, String telefone,
-                        String status, int idInstituicao, String nomeFantasia, String endereco, String email) {
-        super(idUsuario, login, senha, documento, telefone, status);
+    public Instituicao(DadosDeUsuario dados, int idInstituicao, String nomeFantasia, String endereco, String email) {
+        super(dados);
         this.idInstituicao = idInstituicao;
-        this.nomeFantasia = nomeFantasia;
-        this.endereco = endereco;
-        this.email = email;
+        this.nomeFantasia = Validacao.textoObrigatorio(nomeFantasia, "nome fantasia");
+        this.endereco = Validacao.textoObrigatorio(endereco, "endereço");
+        this.email = Validacao.textoObrigatorio(email, "e-mail");
+    }
+
+    /** Único caminho para criar um pedido, o que garante que ele sempre tem uma instituição. */
+    public PedidoRetirada emitirPedidoRetirada(int idPedido) {
+        PedidoRetirada pedido = new PedidoRetirada(idPedido, this);
+        pedidos.add(pedido);
+        return pedido;
+    }
+
+    public List<PedidoRetirada> consultarPedidos() {
+        return Collections.unmodifiableList(pedidos);
     }
 
     public int getIdInstituicao() { return idInstituicao; }
 
     public String getNomeFantasia() { return nomeFantasia; }
-    public void setNomeFantasia(String nomeFantasia) { this.nomeFantasia = nomeFantasia; }
+    public void setNomeFantasia(String nomeFantasia) {
+        this.nomeFantasia = Validacao.textoObrigatorio(nomeFantasia, "nome fantasia");
+    }
 
     public String getEndereco() { return endereco; }
-    public void setEndereco(String endereco) { this.endereco = endereco; }
+    public void setEndereco(String endereco) { this.endereco = Validacao.textoObrigatorio(endereco, "endereço"); }
 
     public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
-
-    public List<PedidoRetirada> getPedidos() {
-        return pedidos;
-    }
-
-    /**
-     * Mantém os dois lados da associação sincronizados, igual ao padrão usado em Doador.registrarDoacao().
-     */
-    public void emitirPedido(PedidoRetirada pedido) {
-        pedidos.add(pedido);
-        pedido.setInstituicao(this);
-    }
+    public void setEmail(String email) { this.email = Validacao.textoObrigatorio(email, "e-mail"); }
 
     @Override
     public String getTipoUsuario() {

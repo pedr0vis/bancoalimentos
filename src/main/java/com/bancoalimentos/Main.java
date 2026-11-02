@@ -2,9 +2,20 @@ package com.bancoalimentos;
 
 import com.bancoalimentos.model.*;
 
-import java.util.ArrayList;
-import java.util.List;
+import com.bancoalimentos.model.Alimento;
+import com.bancoalimentos.model.DadosDeUsuario;
+import com.bancoalimentos.model.Descarte;
+import com.bancoalimentos.model.Distribuicao;
+import com.bancoalimentos.model.DoacaoRecebida;
+import com.bancoalimentos.model.Doador;
+import com.bancoalimentos.model.Instituicao;
+import com.bancoalimentos.model.Lote;
+import com.bancoalimentos.model.PedidoRetirada;
+import com.bancoalimentos.model.RelatorioEstoque;
+import com.bancoalimentos.model.Usuario;
 
+import java.time.LocalDate;
+import java.util.List;
 /**
  * Classe de demonstração: cria um pequeno cenário do Banco de Alimentos e
  * mostra os relacionamentos funcionando na prática (herança, composição e
@@ -12,65 +23,70 @@ import java.util.List;
  */
 public class Main {
 
+    private static final LocalDate HOJE = LocalDate.of(2026, 11, 20);
+
     public static void main(String[] args) {
+        Doador doador = criarDoador();
+        Instituicao instituicao = criarInstituicao();
 
-        // --- Herança: Doador e Instituicao são Usuario ---
-        Doador doador = new Doador(1, "joao.mercado", "senha123", "12345678900",
-                "43999990000", "Ativo", 1, "João - Mercado Central");
-        doador.setInstituicaoBeneficiada("Casa de Acolhimento Esperança");
-
-        Instituicao instituicao = new Instituicao(2, "creche.luz", "senha456", "12345678000199",
-                "43988880000", "Ativo", 1, "Creche Luz do Amanhã",
-                "Rua das Flores, 100 - Londrina", "contato@crecheluz.org");
-
-        // --- Composição: Alimento cria seu próprio Lote ---
         Alimento arroz = new Alimento(1, "Arroz", "Arroz tipo 1, pacote 5kg", "Grãos", 200);
-        Lote loteArroz = arroz.adicionarLote(1, "2026-12-01", "2026-06-01", 501);
+        Lote loteMaisNovo = arroz.adicionarLote(2, LocalDate.of(2027, 6, 1), LocalDate.of(2026, 8, 1), 502);
+        Lote loteMaisAntigo = arroz.adicionarLote(1, LocalDate.of(2026, 12, 1), LocalDate.of(2026, 6, 1), 501);
 
-        // --- Associação "Ter": Doador -> DoacaoRecebida, e vínculo com o Lote ---
-        DoacaoRecebida doacao = new DoacaoRecebida(1, "2026-08-30");
-        doacao.setLote(loteArroz);
-        doador.registrarDoacao(doacao);
+        DoacaoRecebida doacao = doador.realizarDoacao(1, HOJE.minusDays(2));
+        doacao.adicionarLote(loteMaisNovo);
+        doacao.adicionarLote(loteMaisAntigo);
 
-        // --- Associação "Registrar": RelatorioEstoque -> Descarte/Distribuicao ---
-        RelatorioEstoque relatorio = new RelatorioEstoque(1, "2026-12-01", "2026-08-31");
+        RelatorioEstoque relatorio = new RelatorioEstoque(1, HOJE);
+        relatorio.registrarDoacao(doacao);
+        relatorio.registrarDistribuicao(new Distribuicao(1, 50, HOJE, loteMaisAntigo));
+        relatorio.registrarDescarte(new Descarte(1, "Embalagem danificada", 5, HOJE, loteMaisAntigo));
 
-        Descarte descarte = new Descarte(1, "Validade vencida", 5, "2026-08-29");
-        descarte.adicionarLote(loteArroz);
-        relatorio.registrarDescarte(descarte);
+        PedidoRetirada pedido = instituicao.emitirPedidoRetirada(1);
+        pedido.adicionarLote(loteMaisAntigo);
+        pedido.aprovar();
 
-        Distribuicao distribuicao = new Distribuicao(1, 50, "2026-08-30");
-        distribuicao.adicionarAlimento(arroz);
-        relatorio.registrarDistribuicao(distribuicao);
+        imprimirUsuarios(List.of(doador, instituicao));
+        imprimirRastreabilidade(doador, doacao);
+        imprimirEstoque(arroz);
+        System.out.println(System.lineSeparator() + "=== " + relatorio.gerarRelatorio());
+        System.out.println(System.lineSeparator() + "=== Pedido de retirada ===");
+        System.out.println(instituicao.getNomeFantasia() + " | pedido #1: " + pedido.getStatusPedido());
+    }
 
-        // --- Associação "Emitir": Instituicao -> PedidoRetirada ---
-        PedidoRetirada pedido = new PedidoRetirada(1, "Pendente");
-        pedido.adicionarLote(loteArroz);
-        instituicao.emitirPedido(pedido);
+    private static Doador criarDoador() {
+        DadosDeUsuario acesso = new DadosDeUsuario(1, "joao.mercado", "senha123", "12345678900", "43999990000");
+        Doador doador = new Doador(acesso, 1, "João - Mercado Central");
+        doador.setInstituicaoBeneficiada("Casa de Acolhimento Esperança");
+        return doador;
+    }
 
-        // --- Polimorfismo: tratando Doador e Instituicao como Usuario ---
-        List<Usuario> usuarios = new ArrayList<>();
-        usuarios.add(doador);
-        usuarios.add(instituicao);
+    private static Instituicao criarInstituicao() {
+        DadosDeUsuario acesso = new DadosDeUsuario(2, "creche.luz", "senha456", "12345678000199", "43988880000");
+        return new Instituicao(acesso, 1, "Creche Luz do Amanhã", "Rua das Flores, 100 - Londrina", "contato@crecheluz.org");
+    }
 
+    private static void imprimirUsuarios(List<Usuario> usuarios) {
         System.out.println("=== Usuários cadastrados ===");
-        for (Usuario u : usuarios) {
-            System.out.println(u.getLogin() + " -> " + u.getTipoUsuario());
+        for (Usuario usuario : usuarios) {
+            System.out.println(usuario.getLogin() + " -> " + usuario.getTipoUsuario() + " (" + usuario.getStatus() + ")");
         }
+    }
 
-        System.out.println("\n=== Rastreabilidade da doação ===");
-        System.out.println("Doação #" + doacao.getIdDoacao() + " feita por " + doador.getNome()
-                + " -> Lote " + doacao.getLote().getNumeroLote()
-                + " -> Alimento: " + doacao.getLote().getAlimento().getNome());
+    private static void imprimirRastreabilidade(Doador doador, DoacaoRecebida doacao) {
+        System.out.println(System.lineSeparator() + "=== Rastreabilidade da doação ===");
+        for (Lote lote : doacao.listarLotes()) {
+            System.out.println("Doação #" + doacao.getIdDoacao() + " de " + doador.getNome()
+                    + " -> lote " + lote.getNumeroLote() + " -> " + lote.getAlimento().getNome());
+        }
+    }
 
-        System.out.println("\n=== Relatório de estoque ===");
-        System.out.println("Quantidade descartada (calculada automaticamente): "
-                + relatorio.getQuantidadeDescarte());
-        System.out.println("Distribuições registradas: " + relatorio.getDistribuicoes().size());
-
-        System.out.println("\n=== Pedido de retirada ===");
-        System.out.println("Instituição: " + instituicao.getNomeFantasia()
-                + " | Pedidos emitidos: " + instituicao.getPedidos().size()
-                + " | Status do pedido #1: " + pedido.getStatusPedido());
+    private static void imprimirEstoque(Alimento alimento) {
+        System.out.println(System.lineSeparator() + "=== Estoque de " + alimento.getNome() + " (ordem FEFO) ===");
+        System.out.println("Saldo: " + alimento.getQuantidade());
+        for (Lote lote : alimento.consultarLotes()) {
+            System.out.println("Lote " + lote.getNumeroLote() + " vence em " + lote.getDataValidade()
+                    + " (" + lote.diasParaVencer(HOJE) + " dias)");
+        }
     }
 }

@@ -1,6 +1,7 @@
 package com.bancoalimentos.model;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -15,24 +16,46 @@ import java.util.List;
  */
 public class PedidoRetirada {
 
-    private int idPedido;
-    private String statusPedido;
+    private final int idPedido;
+    private StatusPedido statusPedido = StatusPedido.ABERTO;
+    
+    private final Instituicao instituicao;
+    private final List<Lote> lotes = new ArrayList<>();
 
-    private Instituicao instituicao;
-    private List<Lote> lotes = new ArrayList<>();
-
-    public PedidoRetirada(int idPedido, String statusPedido) {
+    PedidoRetirada(int idPedido, Instituicao instituicao) {
         this.idPedido = idPedido;
-        this.statusPedido = statusPedido;
+        this.instituicao = instituicao;
+    }
+
+    public void adicionarLote(Lote lote) {
+        Validacao.obrigatorio(lote, "lote");
+        if (statusPedido != StatusPedido.ABERTO) {
+            throw new IllegalStateException("Só é possível alterar os lotes de um pedido aberto");
+        }
+        if (lotes.contains(lote)) {
+            throw new IllegalArgumentException("O lote " + lote.getNumeroLote() + " já está neste pedido");
+        }
+        lotes.add(lote);
+    }
+
+    public void aprovar() { atualizarStatus(StatusPedido.APROVADO); }
+
+    public void cancelar() { atualizarStatus(StatusPedido.CANCELADO); }
+
+    public void atualizarStatus(StatusPedido novoStatus) {
+        if (!statusPedido.podeMudarPara(novoStatus)) {
+            throw new IllegalStateException(String.format(
+                    "Pedido %d: não é possível mudar de %s para %s", idPedido, statusPedido, novoStatus));
+        }
+        statusPedido = novoStatus;
+    }
+
+    public List<Lote> consultarLotes() {
+        return Collections.unmodifiableList(lotes);
     }
 
     public int getIdPedido() { return idPedido; }
-    public String getStatusPedido() { return statusPedido; }
-    public void setStatusPedido(String statusPedido) { this.statusPedido = statusPedido; }
-
+    public StatusPedido getStatusPedido() { return statusPedido; }
     public Instituicao getInstituicao() { return instituicao; }
-    void setInstituicao(Instituicao instituicao) { this.instituicao = instituicao; }
-
-    public List<Lote> getLotes() { return lotes; }
-    public void adicionarLote(Lote lote) { lotes.add(lote); }
 }
+

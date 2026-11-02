@@ -8,8 +8,7 @@ import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 
 /**
- * Guarda senhas somente em forma de hash (PBKDF2 com sal aleatório),
- * conforme a seção 1.2.5 da AEP. Formato: pbkdf2$iteracoes$sal$hash.
+ * Guarda senhas somente em forma de hash (PBKDF2 com sal aleatório). Formato: pbkdf2$iteracoes$sal$hash.
  */
 public final class HashDeSenha {
 

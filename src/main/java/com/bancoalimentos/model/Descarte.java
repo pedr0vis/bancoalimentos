@@ -1,13 +1,9 @@
 package com.bancoalimentos.model;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.time.LocalDate;
 
 /**
- * ASSOCIAÇÃO: Descarte (1..1) -- RelatorioEstoque (o "1..1" aparece do lado
- * de Descarte no diagrama, ou seja, cada Descarte pertence a um único
- * relatório). O setter é "package-private" (sem 'public') porque quem deve
- * comandar esse vínculo é sempre RelatorioEstoque.registrarDescarte().
+ * ASSOCIAÇÃO: Descarte (1..1) -- RelatorioEstoque (o "1..1" representa que cada Descarte pertence a um único relatório).
  *
  * ASSOCIAÇÃO "Conter": Descarte (1..1) -- Lote (0..*), ou seja, um mesmo
  * registro de descarte pode abranger itens de mais de um lote.
@@ -17,26 +13,36 @@ public class Descarte {
     private int idDescarte;
     private String motivo;
     private int quantidade;
-    private String data;
+    private final LocalDate data;
+    private final Lote lote;
 
     private RelatorioEstoque relatorioEstoque;
-    private List<Lote> lotes = new ArrayList<>();
+    private boolean registrado;
 
-    public Descarte(int idDescarte, String motivo, int quantidade, String data) {
+    public Descarte(int idDescarte, String motivo, int quantidade, LocalDate data, Lote lote) {
         this.idDescarte = idDescarte;
-        this.motivo = motivo;
-        this.quantidade = quantidade;
-        this.data = data;
+        this.motivo = Validacao.textoObrigatorio(motivo, "motivo");
+        this.quantidade = Validacao.positivo(quantidade, "quantidade");
+        this.data = Validacao.obrigatorio(data, "data do descarte");
+        this.lote = Validacao.obrigatorio(lote, "lote");
     }
 
+    /** Dá baixa no estoque da quantidade descartada. */
+    public void registrarDescarte() {
+        if (registrado) {
+            throw new IllegalStateException("O descarte " + idDescarte + " já foi registrado");
+        }
+        lote.baixarEstoque(quantidade);
+        registrado = true;
+    }
+
+    void setRelatorioEstoque(RelatorioEstoque relatorioEstoque) { this.relatorioEstoque = relatorioEstoque; }
+
+    public boolean isRegistrado() { return registrado; }
     public int getIdDescarte() { return idDescarte; }
     public String getMotivo() { return motivo; }
     public int getQuantidade() { return quantidade; }
-    public String getData() { return data; }
-
+    public LocalDate getData() { return data; }
+    public Lote getLote() { return lote; }
     public RelatorioEstoque getRelatorioEstoque() { return relatorioEstoque; }
-    void setRelatorioEstoque(RelatorioEstoque relatorioEstoque) { this.relatorioEstoque = relatorioEstoque; }
-
-    public List<Lote> getLotes() { return lotes; }
-    public void adicionarLote(Lote lote) { lotes.add(lote); }
 }

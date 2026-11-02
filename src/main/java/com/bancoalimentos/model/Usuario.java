@@ -1,48 +1,61 @@
 package com.bancoalimentos.model;
 
+import com.bancoalimentos.seguranca.HashDeSenha;
+
 /**
  * Classe abstrata que representa um usuário do sistema.
  * É a superclasse de Doador e Instituicao (relação de HERANÇA/GENERALIZAÇÃO).
  *
  * No domínio do Banco de Alimentos, um "Usuario" puro nunca
- * existe sozinho: todo usuário cadastrado é OBRIGATORIAMENTE um Doador ou uma
+ * existe sozinho: todo usuário cadastrado é obrigatoriamente um Doador ou uma
  * Instituicao. Tornar a classe abstrata impede "new Usuario(...)" e obriga o
  * uso de uma das subclasses, refletindo exatamente a regra de negócio.
  */
 public abstract class Usuario {
 
-    private int idUsuario;
+    private final int idUsuario;
     private String login;
-    private String senha;
-    private String documento; // CPF (Doador) ou CNPJ (Instituicao)
+    private String senhaHash;
+    private final String documento; // CPF (Doador) ou CNPJ (Instituicao)
     private String telefone;
-    private String status;
+    private StatusUsuario status = StatusUsuario.ATIVO;
 
-    public Usuario(int idUsuario, String login, String senha, String documento,
-                    String telefone, String status) {
-        this.idUsuario = idUsuario;
-        this.login = login;
-        this.senha = senha;
-        this.documento = documento;
-        this.telefone = telefone;
-        this.status = status;
+    protected Usuario(DadosDeUsuario dados) {
+        this.idUsuario = dados.getIdUsuario();
+        this.login = Validacao.textoObrigatorio(dados.getLogin(), "login");
+        this.senhaHash = HashDeSenha.gerar(Validacao.textoObrigatorio(dados.getSenha(), "senha"));
+        this.documento = Validacao.textoObrigatorio(dados.getDocumento(), "documento");
+        this.telefone = dados.getTelefone();
     }
+
+    public boolean autenticar(String login, String senha) {
+        return estaAtivo()
+                && this.login.equals(login)
+                && senha != null
+                && HashDeSenha.confere(senha, senhaHash);
+    }
+
+    public void alterarSenha(String novaSenha) {
+        this.senhaHash = HashDeSenha.gerar(Validacao.textoObrigatorio(novaSenha, "nova senha"));
+    }
+
+    public void ativar() { status = StatusUsuario.ATIVO; }
+
+    public void inativar() { status = StatusUsuario.INATIVO; }
+
+    public boolean estaAtivo() { return status == StatusUsuario.ATIVO; }
 
     public int getIdUsuario() { return idUsuario; }
 
     public String getLogin() { return login; }
-    public void setLogin(String login) { this.login = login; }
-
-    public String getSenha() { return senha; }
-    public void setSenha(String senha) { this.senha = senha; }
+    public void setLogin(String login) { this.login = Validacao.textoObrigatorio(login, "login"); }
 
     public String getDocumento() { return documento; }
 
     public String getTelefone() { return telefone; }
     public void setTelefone(String telefone) { this.telefone = telefone; }
 
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public StatusUsuario getStatus() { return status; }
 
     public abstract String getTipoUsuario();
 }

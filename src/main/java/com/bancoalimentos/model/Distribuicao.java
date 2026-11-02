@@ -1,36 +1,47 @@
 package com.bancoalimentos.model;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.time.LocalDate;
 
 /**
  * ASSOCIAÇÃO: Distribuicao (1..1) -- RelatorioEstoque (0..* do lado do
  * relatório), mesmo padrão de Descarte.
- * ASSOCIAÇÃO "Conter": Distribuicao (1..1) -- Alimento (0..*). Uma mesma
- * distribuição pode levar mais de um tipo de alimento.
+ * 
  */
 public class Distribuicao {
 
     private int idDistribuicao;
     private int itensRetirados;
-    private String dataEntrega;
+    private final LocalDate dataEntrega;
+    private final Lote lote;
 
     private RelatorioEstoque relatorioEstoque;
-    private List<Alimento> alimentos = new ArrayList<>();
+    private boolean registrada;
 
-    public Distribuicao(int idDistribuicao, int itensRetirados, String dataEntrega) {
+    public Distribuicao(int idDistribuicao, int itensRetirados, LocalDate dataEntrega, Lote lote) {
         this.idDistribuicao = idDistribuicao;
-        this.itensRetirados = itensRetirados;
-        this.dataEntrega = dataEntrega;
+        this.itensRetirados = Validacao.positivo(itensRetirados, "itens retirados");
+        this.dataEntrega = Validacao.obrigatorio(dataEntrega, "data de entrega");
+        this.lote = Validacao.obrigatorio(lote, "lote");
     }
 
-    public int getIdDistribuicao() { return idDistribuicao; }
-    public int getItensRetirados() { return itensRetirados; }
-    public String getDataEntrega() { return dataEntrega; }
+    /** Dá baixa no estoque. Lote vencido não pode ser distribuído. */
+    public void registrarDistribuicao() {
+        if (registrada) {
+            throw new IllegalStateException("A distribuição " + idDistribuicao + " já foi registrada");
+        }
+        if (lote.estaVencido(dataEntrega)) {
+            throw new IllegalStateException("O lote " + lote.getNumeroLote() + " está vencido e não pode ser distribuído");
+        }
+        lote.baixarEstoque(itensRetirados);
+        registrada = true;
+    }
 
-    public RelatorioEstoque getRelatorioEstoque() { return relatorioEstoque; }
     void setRelatorioEstoque(RelatorioEstoque relatorioEstoque) { this.relatorioEstoque = relatorioEstoque; }
 
-    public List<Alimento> getAlimentos() { return alimentos; }
-    public void adicionarAlimento(Alimento alimento) { alimentos.add(alimento); }
+    public boolean isRegistrada() { return registrada; }
+    public int getIdDistribuicao() { return idDistribuicao; }
+    public int getItensRetirados() { return itensRetirados; }
+    public LocalDate getDataEntrega() { return dataEntrega; }
+    public Lote getLote() { return lote; }
+    public RelatorioEstoque getRelatorioEstoque() { return relatorioEstoque; }
 }

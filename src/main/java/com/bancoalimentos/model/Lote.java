@@ -1,5 +1,8 @@
 package com.bancoalimentos.model;
 
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit; // importa uma enumeração padrão de unidades de tempo e período
+
 /**
  * Lado "parte" da composição com Alimento.
  *
@@ -13,28 +16,47 @@ package com.bancoalimentos.model;
 public class Lote {
 
     private int idLote;
-    private String dataValidade;
-    private String dataFabricacao;
-    private int numeroLote;
-
+    private final LocalDate dataValidade;
+    private final LocalDate dataFabricacao;
+    private final int numeroLote;
+    
     private final Alimento alimento;
 
-    Lote(int idLote, String dataValidade, String dataFabricacao, int numeroLote, Alimento alimento) {
+    Lote(int idLote, LocalDate dataValidade, LocalDate dataFabricacao, int numeroLote, Alimento alimento) {
         this.idLote = idLote;
-        this.dataValidade = dataValidade;
+        this.dataValidade = Validacao.obrigatorio(dataValidade, "data de validade");
         this.dataFabricacao = dataFabricacao;
         this.numeroLote = numeroLote;
         this.alimento = alimento;
+        if (dataFabricacao != null && dataFabricacao.isAfter(dataValidade)) {
+            throw new IllegalArgumentException("A data de fabricação não pode ser depois da validade");
+        }
+    }
+
+    public boolean estaVencido() {
+        return estaVencido(LocalDate.now());
+    }
+
+    public boolean estaVencido(LocalDate dataReferencia) {
+        return dataReferencia.isAfter(dataValidade);
+    }
+
+    /** Dias até o vencimento. O valor é negativo quando o lote já venceu. */
+    public int diasParaVencer() {
+        return diasParaVencer(LocalDate.now());
+    }
+
+    public int diasParaVencer(LocalDate dataReferencia) {
+        return (int) ChronoUnit.DAYS.between(dataReferencia, dataValidade);
+    }
+
+    void baixarEstoque(int quantidade) {
+        alimento.retirar(quantidade);
     }
 
     public int getIdLote() { return idLote; }
-
-    public String getDataValidade() { return dataValidade; }
-    public void setDataValidade(String dataValidade) { this.dataValidade = dataValidade; }
-
-    public String getDataFabricacao() { return dataFabricacao; }
-
+    public LocalDate getDataValidade() { return dataValidade; }
+    public LocalDate getDataFabricacao() { return dataFabricacao; }
     public int getNumeroLote() { return numeroLote; }
-
     public Alimento getAlimento() { return alimento; }
 }
